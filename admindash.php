@@ -12,12 +12,18 @@ $page = $_GET['page'] ?? 'home';
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
 
+$flashError = $_SESSION['flash_error'] ?? null;
+unset($_SESSION['flash_error']);
+
 // --- DATA FETCHING ---
-$stats = ['pending_orders' => 0, 'upcoming_events' => 0, 'active_clients' => 0];
+$stats = [];
 if ($page === 'home') {
     $stats['pending_orders'] = dbFetchOne("SELECT COUNT(*) as c FROM orders WHERE status = 'pending'")['c'];
+    $stats['in_progress_orders'] = dbFetchOne("SELECT COUNT(*) as c FROM orders WHERE status = 'in_progress'")['c'];
+    $stats['delivered_orders'] = dbFetchOne("SELECT COUNT(*) as c FROM orders WHERE status = 'delivered'")['c'];
     $stats['upcoming_events'] = dbFetchOne("SELECT COUNT(*) as c FROM events WHERE date >= CURDATE()")['c'];
     $stats['active_clients'] = dbFetchOne("SELECT COUNT(*) as c FROM clients")['c'];
+    $stats['total_revenue'] = dbFetchOne("SELECT COALESCE(SUM(total_amount), 0) as t FROM orders WHERE status != 'cancelled'")['t'];
     
     $recentActivity = dbFetchAll("
         SELECT o.id, c.full_name, e.type as event_type, o.total_amount, o.status, p.status as payment_status, o.created_at 
@@ -47,12 +53,35 @@ if ($page === 'clients') {
 }
 
 $menusList = [];
+$categoriesList = [];
 if ($page === 'menus') {
+    $categoriesList = dbFetchAll("SELECT * FROM categories ORDER BY name ASC");
     $packages = dbFetchAll("SELECT * FROM menus");
     foreach($packages as $pkg) {
-        $items = dbFetchAll("SELECT mi.name, mi.price, c.name as category FROM menu_items mi JOIN categories c ON c.id = mi.category_id WHERE mi.menu_id = ?", [$pkg['id']]);
+        $items = dbFetchAll("SELECT mi.id, mi.name, mi.price, c.name as category FROM menu_items mi JOIN categories c ON c.id = mi.category_id WHERE mi.menu_id = ?", [$pkg['id']]);
         $menusList[] = ['package' => $pkg, 'items' => $items];
     }
+}
+
+$reportData = [];
+if ($page === 'reports') {
+    $reportData['revenue'] = dbFetchAll("SELECT DATE_FORMAT(created_at, '%b %Y') as month, SUM(total_amount) as total FROM orders WHERE status != 'cancelled' GROUP BY month ORDER BY MIN(created_at) ASC LIMIT 12");
+    $reportData['status_distribution'] = dbFetchAll("SELECT status, COUNT(*) as count FROM orders GROUP BY status");
+    $reportData['top_items'] = dbFetchAll("
+        SELECT 
+            mi.name AS item_name, 
+            m.name AS menu_name, 
+            cat.name AS category, 
+            SUM(oi.quantity) AS total_qty_ordered, 
+            SUM(oi.quantity * mi.price) AS total_revenue 
+        FROM order_items oi 
+        JOIN menu_items mi ON mi.id = oi.menu_item_id 
+        LEFT JOIN menus m ON m.id = mi.menu_id 
+        JOIN categories cat ON cat.id = mi.category_id 
+        GROUP BY mi.id, mi.name, m.name, cat.name 
+        ORDER BY total_qty_ordered DESC 
+        LIMIT 5
+    ");
 }
 ?>
 <!DOCTYPE html>
@@ -62,6 +91,7 @@ if ($page === 'menus') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Staff Dashboard - Gourmet Catering</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root {
             --primary: #d4af37;
@@ -155,6 +185,7 @@ if ($page === 'menus') {
             <a href="admindash.php?page=orders" class="nav-item <?= $page==='orders'?'active':'' ?>">Manage Orders</a>
             <a href="admindash.php?page=clients" class="nav-item <?= $page==='clients'?'active':'' ?>">Clients</a>
             <a href="admindash.php?page=menus" class="nav-item <?= $page==='menus'?'active':'' ?>">Menus & Packages</a>
+            <a href="admindash.php?page=reports" class="nav-item <?= $page==='reports'?'active':'' ?>">Reports & Analytics</a>
         </nav>
 
         <div class="sidebar-footer">
@@ -170,7 +201,8 @@ if ($page === 'menus') {
             <h1 class="page-title">
                 <?= $page==='home' ? 'Overview' : 
                    ($page==='orders' ? 'Manage Orders' : 
-                   ($page==='clients' ? 'Client Directory' : 'Menus & Packages')) ?>
+                   ($page==='clients' ? 'Client Directory' : 
+                   ($page==='reports' ? 'Reports & Analytics' : 'Menus & Packages'))) ?>
             </h1>
             
             <div class="user-profile">
@@ -185,31 +217,55 @@ if ($page === 'menus') {
         <?php if ($flash): ?>
             <div class="alert alert-success"><?= htmlspecialchars($flash) ?></div>
         <?php endif; ?>
+        <?php if ($flashError): ?>
+            <div class="alert alert-danger" style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; font-weight: 500;"><?= htmlspecialchars($flashError) ?></div>
+        <?php endif; ?>
 
         <!-- DASHBOARD HOME -->
         <?php if ($page === 'home'): ?>
             <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon">!</div>
+                <a href="admindash.php?page=orders" class="stat-card" style="text-decoration: none; color: inherit; cursor: pointer;">
+                    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">!</div>
                     <div class="stat-details">
                         <span class="stat-value"><?= $stats['pending_orders'] ?></span>
                         <span class="stat-label">Pending Orders</span>
                     </div>
-                </div>
-                <div class="stat-card">
+                </a>
+                <a href="admindash.php?page=orders" class="stat-card" style="text-decoration: none; color: inherit; cursor: pointer;">
+                    <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">⚙️</div>
+                    <div class="stat-details">
+                        <span class="stat-value"><?= $stats['in_progress_orders'] ?></span>
+                        <span class="stat-label">In Progress</span>
+                    </div>
+                </a>
+                <a href="admindash.php?page=orders" class="stat-card" style="text-decoration: none; color: inherit; cursor: pointer;">
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">✓</div>
+                    <div class="stat-details">
+                        <span class="stat-value"><?= $stats['delivered_orders'] ?></span>
+                        <span class="stat-label">Finished Orders</span>
+                    </div>
+                </a>
+                <a href="admindash.php?page=reports" class="stat-card" style="text-decoration: none; color: inherit; cursor: pointer;">
+                    <div class="stat-icon" style="background: rgba(212, 175, 55, 0.1); color: #d4af37;">$</div>
+                    <div class="stat-details">
+                        <span class="stat-value">$<?= number_format($stats['total_revenue'], 2) ?></span>
+                        <span class="stat-label">Total Revenue</span>
+                    </div>
+                </a>
+                <a href="admindash.php?page=orders" class="stat-card" style="text-decoration: none; color: inherit; cursor: pointer;">
                     <div class="stat-icon">📅</div>
                     <div class="stat-details">
                         <span class="stat-value"><?= $stats['upcoming_events'] ?></span>
                         <span class="stat-label">Upcoming Events</span>
                     </div>
-                </div>
-                <div class="stat-card">
+                </a>
+                <a href="admindash.php?page=clients" class="stat-card" style="text-decoration: none; color: inherit; cursor: pointer;">
                     <div class="stat-icon">👥</div>
                     <div class="stat-details">
                         <span class="stat-value"><?= $stats['active_clients'] ?></span>
                         <span class="stat-label">Active Clients</span>
                     </div>
-                </div>
+                </a>
             </div>
 
             <div class="card">
@@ -228,7 +284,7 @@ if ($page === 'menus') {
                                 <td><?= htmlspecialchars($o['full_name']) ?></td>
                                 <td><?= htmlspecialchars($o['event_type']) ?></td>
                                 <td>$<?= number_format($o['total_amount'], 2) ?></td>
-                                <td><span class="status-badge status-<?= $o['status'] ?>"><?= $o['status'] ?></span></td>
+                                <td><span class="status-badge status-<?= $o['status'] ?>"><?= $o['status'] === 'delivered' ? 'Finished' : ucfirst(str_replace('_', ' ', $o['status'])) ?></span></td>
                                 <td><span class="status-badge status-<?= $o['payment_status'] ?? 'pending' ?>"><?= $o['payment_status'] ?? 'Pending' ?></span></td>
                             </tr>
                             <?php endforeach; ?>
@@ -268,7 +324,8 @@ if ($page === 'menus') {
                                         <select name="status" class="inline-select">
                                             <option value="pending" <?= $o['order_status']==='pending'?'selected':'' ?>>Pending</option>
                                             <option value="confirmed" <?= $o['order_status']==='confirmed'?'selected':'' ?>>Confirmed</option>
-                                            <option value="delivered" <?= $o['order_status']==='delivered'?'selected':'' ?>>Delivered</option>
+                                            <option value="in_progress" <?= $o['order_status']==='in_progress'?'selected':'' ?>>In Progress</option>
+                                            <option value="delivered" <?= $o['order_status']==='delivered'?'selected':'' ?>>Finished</option>
                                             <option value="cancelled" <?= $o['order_status']==='cancelled'?'selected':'' ?>>Cancelled</option>
                                         </select>
                                         <button type="submit" class="btn-update">Save</button>
@@ -306,7 +363,7 @@ if ($page === 'menus') {
                 <?php else: ?>
                     <table>
                         <thead>
-                            <tr><th>ID</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Joined</th></tr>
+                            <tr><th>ID</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Actions</th></tr>
                         </thead>
                         <tbody>
                             <?php foreach ($clientsList as $c): ?>
@@ -316,6 +373,18 @@ if ($page === 'menus') {
                                 <td><?= htmlspecialchars($c['email']) ?></td>
                                 <td><?= htmlspecialchars($c['phone'] ?? 'N/A') ?></td>
                                 <td><?= date('M d, Y', strtotime($c['created_at'])) ?></td>
+                                <td>
+                                    <form action="Staff Dashboard/client_actions.php" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this client? This cannot be undone.');">
+                                        <input type="hidden" name="action" value="delete_client">
+                                        <input type="hidden" name="client_id" value="<?= $c['id'] ?>">
+                                        <button type="submit" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 0.85rem; font-weight: 600; padding: 0.4rem 0.6rem; border-radius: 6px;" onmouseover="this.style.background='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.background='none'">Remove</button>
+                                    </form>
+                                    <form action="Staff Dashboard/client_actions.php" method="POST" style="display:inline;" onsubmit="return confirm('WARNING: Force removing a client will PERMANENTLY delete their entire order history, payments, and events. Are you absolutely sure?');">
+                                        <input type="hidden" name="action" value="force_delete_client">
+                                        <input type="hidden" name="client_id" value="<?= $c['id'] ?>">
+                                        <button type="submit" style="background: none; border: none; color: #7f1d1d; cursor: pointer; font-size: 0.85rem; font-weight: 600; padding: 0.4rem 0.6rem; border-radius: 6px;" onmouseover="this.style.background='rgba(127, 29, 29, 0.1)'" onmouseout="this.style.background='none'">Force Remove</button>
+                                    </form>
+                                </td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -326,6 +395,9 @@ if ($page === 'menus') {
         <!-- MENUS & PACKAGES -->
         <?php elseif ($page === 'menus'): ?>
             <?php require_once 'Staff Dashboard/manage_menu.php'; ?>
+        <!-- REPORTS -->
+        <?php elseif ($page === 'reports'): ?>
+            <?php require_once 'Staff Dashboard/reports.php'; ?>
         <?php endif; ?>
 
     </main>

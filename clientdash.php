@@ -31,14 +31,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     if ($action === 'add_to_cart') {
         $itemId = (int)$_POST['item_id'];
-        $qty = (int)$_POST['quantity'];
-        if ($qty > 0) {
+        $qtyPerGuest = (int)$_POST['quantity'];
+        
+        $guestCount = $_SESSION['event']['guest_count'] ?? 1;
+        $totalQty = $qtyPerGuest * $guestCount;
+        
+        if ($totalQty > 0) {
             if (isset($_SESSION['cart'][$itemId])) {
-                $_SESSION['cart'][$itemId] += $qty;
+                $_SESSION['cart'][$itemId] += $totalQty;
             } else {
-                $_SESSION['cart'][$itemId] = $qty;
+                $_SESSION['cart'][$itemId] = $totalQty;
             }
-            $_SESSION['flash'] = 'Item added to cart!';
+            $_SESSION['flash'] = 'Item added for all guests!';
         }
         $tab = $_GET['tab'] ?? '';
         $redirectPage = $tab ? "menu&tab=$tab" : 'menu';

@@ -95,7 +95,7 @@ $tab = $_GET['tab'] ?? 'packages';
                             <form action="clientdash.php?page=menu&tab=custom" method="POST" class="add-cart-form">
                                 <input type="hidden" name="action" value="add_to_cart">
                                 <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
-                                <input type="number" name="quantity" class="qty-input" value="1" min="1" max="1000">
+                                <input type="number" name="quantity" class="qty-input" value="1" min="1" max="1000" title="Portions per guest" style="width: 60px; padding: 0.3rem;">
                                 <button type="submit" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size:0.85rem;">Add</button>
                             </form>
                         </div>
