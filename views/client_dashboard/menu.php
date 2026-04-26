@@ -7,11 +7,11 @@ if (!isset($page) || $page !== 'menu') {
 // Fetch Pre-set Packages (Menus)
 $packages = dbFetchAll("SELECT * FROM menus");
 
-// Fetch Custom Menu Items
+// Fetch Custom Menu Items via vw_menu (replaces menu_items→categories JOIN)
 $customItems = [];
-$items = dbFetchAll("SELECT mi.*, c.name as category_name FROM menu_items mi JOIN categories c ON c.id = mi.category_id WHERE mi.is_available = 1 ORDER BY c.name, mi.name");
+$items = dbFetchAll("SELECT item_id AS id, item_name AS name, description, price, category, menu_name, is_available FROM vw_menu WHERE is_available = 1 ORDER BY category, item_name");
 foreach ($items as $item) {
-    $customItems[$item['category_name']][] = $item;
+    $customItems[$item['category']][] = $item;
 }
 
 // Determine active tab

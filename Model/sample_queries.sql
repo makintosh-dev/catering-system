@@ -189,7 +189,7 @@ GROUP BY event_size;
 
 -- Search orders by client name
 SELECT vos.*
-FROM vw_order_summary vos
+FROM vw_order vos
 WHERE vos.client_name LIKE CONCAT('%', 'Ali', '%');
 
 -- Filter orders by status and date range

@@ -1,7 +1,6 @@
 --  Password hash password: "Password123"
 
 
-
 -- USERS
 
 INSERT INTO users (username, password_hash, full_name, email, role) VALUES
@@ -103,6 +102,7 @@ INSERT INTO menu_items (menu_id, category_id, name, description, price, is_avail
 (5, 2, 'Chicken Qorma', 'Yogurt and nut-based chicken curry', 600.00, 1),
 (5, 6, 'Tandoori Roti', 'Whole wheat tandoor bread', 40.00, 1),
 (5, 4, 'Ras Malai', 'Cottage cheese patties in cream', 160.00, 1);
+
 
 -- ORDERS
 

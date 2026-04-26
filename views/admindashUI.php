@@ -277,7 +277,7 @@
                 <?php else: ?>
                     <table>
                         <thead>
-                            <tr><th>ID</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Joined</th><th>Actions</th></tr>
+                            <tr><th>ID</th><th>Full Name</th><th>Email</th><th>Phone</th><th>Orders</th><th>Lifetime Spend</th><th>Joined</th><th>Actions</th></tr>
                         </thead>
                         <tbody>
                             <?php foreach ($clientsList as $c): ?>
@@ -286,7 +286,9 @@
                                 <td><strong><?= htmlspecialchars($c['full_name']) ?></strong></td>
                                 <td><?= htmlspecialchars($c['email']) ?></td>
                                 <td><?= htmlspecialchars($c['phone'] ?? 'N/A') ?></td>
-                                <td><?= date('M d, Y', strtotime($c['created_at'])) ?></td>
+                                <td><?= $c['total_orders'] ?></td>
+                                <td style="color: var(--success, #10b981); font-weight: 600;">PKR <?= number_format($c['lifetime_spend'], 2) ?></td>
+                                <td><?= date('M d, Y', strtotime($c['registered_on'])) ?></td>
                                 <td>
                                     <form action="Staff Dashboard/client_actions.php" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to remove this client? This cannot be undone.');">
                                         <input type="hidden" name="action" value="delete_client">

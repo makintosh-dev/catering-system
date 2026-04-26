@@ -67,7 +67,7 @@ $flash      = $_SESSION['flash'] ?? null;
 $flashError = $_SESSION['flash_error'] ?? null;
 unset($_SESSION['flash'], $_SESSION['flash_error']);
 
-// --- DATA FETCHING ---
+// --- DATA FETCHING (powered by SQL views) ---
 $clientData = [];
 if ($page === 'home' || $page === 'profile') {
     $clientData = dbFetchOne('SELECT * FROM clients WHERE id=?', [$clientId]);
@@ -76,15 +76,34 @@ if ($page === 'home' || $page === 'profile') {
 $stats = ['active_orders' => 0, 'upcoming_events' => 0, 'total_spent' => 0];
 $recentOrders = [];
 if ($page === 'home') {
-    $stats['active_orders']    = dbFetchOne("SELECT COUNT(*) as c FROM orders WHERE client_id=? AND status NOT IN ('delivered','cancelled')", [$clientId])['c'];
-    $stats['upcoming_events']  = dbFetchOne("SELECT COUNT(*) as c FROM events e JOIN orders o ON o.event_id=e.id WHERE o.client_id=? AND e.date >= CURDATE()", [$clientId])['c'];
-    $stats['total_spent']      = dbFetchOne("SELECT COALESCE(SUM(total_amount),0) as t FROM orders WHERE client_id=? AND status != 'cancelled'", [$clientId])['t'];
-    $recentOrders = dbFetchAll("SELECT o.id, e.type, e.date, o.status as order_status, p.status as payment_status, o.total_amount FROM orders o JOIN events e ON e.id = o.event_id LEFT JOIN payments p ON p.order_id = o.id WHERE o.client_id=? ORDER BY o.created_at DESC LIMIT 5", [$clientId]);
+    $stats['active_orders']   = dbFetchOne("SELECT COUNT(*) as c FROM orders WHERE client_id=? AND status NOT IN ('delivered','cancelled')", [$clientId])['c'];
+    // vw_upcoming_events already filters for next 30 days
+    $stats['upcoming_events'] = dbFetchOne("SELECT COUNT(*) as c FROM vw_upcoming_events WHERE client_name = (SELECT full_name FROM clients WHERE id=?)", [$clientId])['c'];
+    $stats['total_spent']     = dbFetchOne("SELECT COALESCE(SUM(total_amount),0) as t FROM orders WHERE client_id=? AND status != 'cancelled'", [$clientId])['t'];
+
+    // vw_order replaces orders→events JOIN; add payment status via LEFT JOIN
+    $recentOrders = dbFetchAll("
+        SELECT vs.order_id AS id, vs.event_type AS type, vs.event_date AS date,
+               vs.status AS order_status, p.status AS payment_status, vs.total_amount
+        FROM vw_order vs
+        LEFT JOIN payments p ON p.order_id = vs.order_id
+        WHERE vs.client_id = ?
+        ORDER BY vs.created_at DESC LIMIT 5
+    ", [$clientId]);
 }
 
 $myOrders = [];
 if ($page === 'orders') {
-    $myOrders = dbFetchAll("SELECT o.id, e.type, e.date, o.status as order_status, p.status as payment_status, o.total_amount, o.created_at FROM orders o JOIN events e ON e.id = o.event_id LEFT JOIN payments p ON p.order_id = o.id WHERE o.client_id=? ORDER BY o.created_at DESC", [$clientId]);
+    // vw_order replaces the 2-table JOIN for order listing
+    $myOrders = dbFetchAll("
+        SELECT vs.order_id AS id, vs.event_type AS type, vs.event_date AS date,
+               vs.status AS order_status, p.status AS payment_status,
+               vs.total_amount, vs.created_at
+        FROM vw_order vs
+        LEFT JOIN payments p ON p.order_id = vs.order_id
+        WHERE vs.client_id = ?
+        ORDER BY vs.created_at DESC
+    ", [$clientId]);
 }
 
 if ($page === 'menu') {
