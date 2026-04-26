@@ -19,9 +19,9 @@ if (!isset($page) || $page !== 'cart') {
                     <?php foreach ($cartDetails as $item): ?>
                     <tr>
                         <td><strong><?= htmlspecialchars($item['name']) ?></strong></td>
-                        <td>$<?= number_format($item['price'], 2) ?></td>
+                        <td>PKR <?= number_format($item['price'], 2) ?></td>
                         <td><?= $item['qty'] ?></td>
-                        <td>$<?= number_format($item['total'], 2) ?></td>
+                        <td>PKR <?= number_format($item['total'], 2) ?></td>
                         <td>
                             <form action="clientdash.php?page=cart" method="POST" style="display:inline;">
                                 <input type="hidden" name="action" value="remove_cart">
@@ -35,11 +35,11 @@ if (!isset($page) || $page !== 'cart') {
             </table>
         <?php endif; ?>
     </div>
-    
+
     <?php if (!empty($cartDetails)): ?>
     <div class="checkout-box">
         <h3>Order Summary</h3>
-        
+
         <div style="margin-top:1rem; padding-bottom:1rem; border-bottom:1px solid var(--border-color); font-size:0.9rem;">
             <strong>Event:</strong> <?= htmlspecialchars($_SESSION['event']['type']) ?><br>
             <strong>Date:</strong> <?= htmlspecialchars($_SESSION['event']['date']) ?><br>
@@ -48,16 +48,16 @@ if (!isset($page) || $page !== 'cart') {
 
         <div style="margin-top:1rem; display:flex; justify-content:space-between; color:var(--text-muted);">
             <span>Items (<?= $cartCount ?>)</span>
-            <span>$<?= number_format($cartTotal, 2) ?></span>
+            <span>PKR <?= number_format($cartTotal, 2) ?></span>
         </div>
         <div class="checkout-total">
             <span>Total:</span>
-            <span>$<?= number_format($cartTotal, 2) ?></span>
+            <span>PKR <?= number_format($cartTotal, 2) ?></span>
         </div>
-        
-        <form action="Client Dashboard/events.php" method="POST">
+
+        <form action="controllers/client_dashboard/events.php" method="POST">
             <input type="hidden" name="action" value="checkout">
-            
+
             <div class="form-group" style="margin-bottom: 1.5rem;">
                 <label style="font-weight: 600; margin-bottom: 0.5rem; display: block;">Payment Method</label>
                 <select name="payment_method" class="form-control" required style="padding: 0.5rem; font-size: 0.95rem;">
@@ -68,7 +68,7 @@ if (!isset($page) || $page !== 'cart') {
                 </select>
             </div>
 
-            <button type="submit" class="btn btn-primary" style="width:100%; text-align:center; padding: 1rem;">Confirm & Place Order</button>
+            <button type="submit" class="btn btn-primary" style="width:100%; text-align:center; padding: 1rem;">Confirm &amp; Place Order</button>
         </form>
     </div>
     <?php endif; ?>

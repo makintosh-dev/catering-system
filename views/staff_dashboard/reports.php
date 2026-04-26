@@ -70,7 +70,7 @@ foreach ($reportData['status_distribution'] as $s) {
                     <td><?= htmlspecialchars($item['menu_name']) ?></td>
                     <td><span style="background:var(--bg-main); padding: 0.2rem 0.5rem; border-radius:4px; font-size:0.8rem; border:1px solid var(--border-color);"><?= htmlspecialchars($item['category']) ?></span></td>
                     <td><?= $item['total_qty_ordered'] ?></td>
-                    <td style="color: var(--success); font-weight: 600;">$<?= number_format($item['total_revenue'], 2) ?></td>
+                    <td style="color: var(--success); font-weight: 600;">PKR <?= number_format($item['total_revenue'], 2) ?></td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>

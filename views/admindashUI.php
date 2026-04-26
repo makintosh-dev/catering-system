@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Staff Dashboard - Gourmet Catering</title>
+    <title>Staff Dashboard - Mashaal Catering System</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -162,7 +162,7 @@
                 <a href="admindash.php?page=reports" class="stat-card" style="text-decoration: none; color: inherit; cursor: pointer;">
                     <div class="stat-icon" style="background: rgba(212, 175, 55, 0.1); color: #d4af37;">$</div>
                     <div class="stat-details">
-                        <span class="stat-value">$<?= number_format($stats['total_revenue'], 2) ?></span>
+                        <span class="stat-value">PKR <?= number_format($stats['total_revenue'], 2) ?></span>
                         <span class="stat-label">Total Revenue</span>
                     </div>
                 </a>
@@ -197,7 +197,7 @@
                                 <td>#<?= $o['id'] ?></td>
                                 <td><?= htmlspecialchars($o['full_name']) ?></td>
                                 <td><?= htmlspecialchars($o['event_type']) ?></td>
-                                <td>$<?= number_format($o['total_amount'], 2) ?></td>
+                                <td>PKR <?= number_format($o['total_amount'], 2) ?></td>
                                 <td><span class="status-badge status-<?= $o['status'] ?>"><?= $o['status'] === 'delivered' ? 'Finished' : ucfirst(str_replace('_', ' ', $o['status'])) ?></span></td>
                                 <td><span class="status-badge status-<?= $o['payment_status'] ?? 'pending' ?>"><?= $o['payment_status'] ?? 'Pending' ?></span></td>
                             </tr>
@@ -230,7 +230,7 @@
                                 <td>#<?= $o['id'] ?></td>
                                 <td><?= htmlspecialchars($o['full_name']) ?></td>
                                 <td><?= htmlspecialchars($o['event_date']) ?></td>
-                                <td>$<?= number_format($o['total_amount'], 2) ?></td>
+                                <td>PKR <?= number_format($o['total_amount'], 2) ?></td>
                                 <td>
                                     <form action="Staff Dashboard/status.php" method="POST" class="inline-form">
                                         <input type="hidden" name="action" value="update_order_status">
@@ -308,10 +308,10 @@
 
         <!-- MENUS & PACKAGES -->
         <?php elseif ($page === 'menus'): ?>
-            <?php require_once 'Staff Dashboard/manage_menu.php'; ?>
+            <?php require_once 'views/staff_dashboard/manage_menu.php'; ?>
         <!-- REPORTS -->
         <?php elseif ($page === 'reports'): ?>
-            <?php require_once 'Staff Dashboard/reports.php'; ?>
+            <?php require_once 'views/staff_dashboard/reports.php'; ?>
         <?php endif; ?>
 
     </main>

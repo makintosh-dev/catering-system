@@ -308,7 +308,7 @@ unset($_SESSION['login_error']);
                         <path d="M12 9v3l2 2" />
                     </svg>
                 </div>
-                <h1 class="logo-text">Gourmet Catering</h1>
+                <h1 class="logo-text">Mashaal Catering System</h1>
             </div>
 
             <div class="tabs">

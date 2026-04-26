@@ -50,7 +50,7 @@ if (!isset($page) || $page !== 'menus') {
             <tr>
                 <td><span style="background:var(--bg-main); padding: 0.2rem 0.5rem; border-radius:4px; font-size:0.8rem; border:1px solid var(--border-color);"><?= htmlspecialchars($item['category']) ?></span></td>
                 <td><?= htmlspecialchars($item['name']) ?></td>
-                <td>$<?= number_format($item['price'], 2) ?></td>
+                <td>PKR <?= number_format($item['price'], 2) ?></td>
                 <td>
                     <form action="controllers/staff_dashboard/menu_actions.php" method="POST" style="display: inline;" onsubmit="return confirm('Remove this item from the package?');">
                         <input type="hidden" name="action" value="delete_item">

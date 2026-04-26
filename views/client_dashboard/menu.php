@@ -49,7 +49,7 @@ $tab = $_GET['tab'] ?? 'packages';
         <p><?= htmlspecialchars($_SESSION['event']['date']) ?> at <?= htmlspecialchars($_SESSION['event']['time']) ?> • <?= htmlspecialchars($_SESSION['event']['guest_count']) ?> Guests</p>
     </div>
     <div>
-        <form action="Client Dashboard/events.php" method="POST" style="display:inline;">
+        <form action="controllers/client_dashboard/events.php" method="POST" style="display:inline;">
             <input type="hidden" name="action" value="clear_event">
             <button type="submit" class="btn btn-outline" style="font-size:0.85rem; padding: 0.5rem 1rem;">Cancel Order</button>
         </form>
@@ -70,7 +70,7 @@ $tab = $_GET['tab'] ?? 'packages';
                     <div class="item-desc"><?= htmlspecialchars($pkg['description']) ?></div>
                 </div>
                 <div class="item-footer" style="margin-top: 1.5rem; justify-content: center;">
-                    <form action="Client Dashboard/events.php" method="POST" style="width:100%;">
+                    <form action="controllers/client_dashboard/events.php" method="POST" style="width:100%;">
                         <input type="hidden" name="action" value="add_package_to_cart">
                         <input type="hidden" name="menu_id" value="<?= $pkg['id'] ?>">
                         <button type="submit" class="btn btn-primary" style="width:100%;">Select Package</button>
@@ -91,7 +91,7 @@ $tab = $_GET['tab'] ?? 'packages';
                             <div class="item-desc"><?= htmlspecialchars($item['description']) ?></div>
                         </div>
                         <div class="item-footer">
-                            <div class="item-price">$<?= number_format($item['price'], 2) ?></div>
+                            <div class="item-price">PKR <?= number_format($item['price'], 2) ?></div>
                             <form action="clientdash.php?page=menu&tab=custom" method="POST" class="add-cart-form">
                                 <input type="hidden" name="action" value="add_to_cart">
                                 <input type="hidden" name="item_id" value="<?= $item['id'] ?>">
@@ -104,7 +104,7 @@ $tab = $_GET['tab'] ?? 'packages';
             </div>
         </div>
     <?php endforeach; ?>
-    
+
     <?php if (!empty($_SESSION['cart'])): ?>
         <div style="margin-top: 3rem; text-align: center;">
             <a href="clientdash.php?page=cart" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 3rem;">Order Review</a>
