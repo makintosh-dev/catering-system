@@ -1,133 +1,32 @@
--- =============================================================
---  CATERING SERVICE SYSTEM — Queries, Views & Indexes
---  File: 03_queries.sql
--- =============================================================
+-- Update Queries
+UPDATE orders SET status = 'confirmed' WHERE id = 5;
+UPDATE menu_items SET is_available = 0 WHERE id = 12;
 
-USE catering_db;
+--  SELECT QUERIES
 
--- ===========================================================
---  SECTION A — INDEXES
--- ===========================================================
-
-CREATE INDEX idx_orders_client      ON orders      (client_id);
-CREATE INDEX idx_orders_status      ON orders      (status);
-CREATE INDEX idx_orders_created     ON orders      (created_at);
-CREATE INDEX idx_menu_items_menu    ON menu_items  (menu_id);
-CREATE INDEX idx_menu_items_cat     ON menu_items  (category_id);
-CREATE INDEX idx_payments_order     ON payments    (order_id);
-CREATE INDEX idx_payments_status    ON payments    (status);
-CREATE INDEX idx_order_items_item   ON order_items (menu_item_id);
-CREATE INDEX idx_clients_email      ON clients     (email);
-CREATE INDEX idx_events_date        ON events      (date);
-
--- ===========================================================
---  SECTION B — VIEWS
--- ===========================================================
-
--- B1. Full order summary (order + client + event + staff)
-CREATE OR REPLACE VIEW vw_order_summary AS
-SELECT
-    o.id            AS order_id,
-    c.full_name     AS client_name,
-    c.email         AS client_email,
-    c.phone         AS client_phone,
-    e.type          AS event_type,
-    e.date          AS event_date,
-    e.location      AS event_location,
-    e.guest_count,
-    u.full_name     AS managed_by,
-    o.status,
-    o.total_amount,
-    o.notes,
-    o.created_at
-FROM orders o
-JOIN clients c ON c.id = o.client_id
-JOIN events  e ON e.id = o.event_id
-JOIN users   u ON u.id = o.user_id;
-
--- B2. Revenue per order (sum of payments)
-CREATE OR REPLACE VIEW vw_order_payments AS
-SELECT
-    o.id          AS order_id,
-    o.total_amount,
-    SUM(p.amount) AS total_paid,
-    (o.total_amount - COALESCE(SUM(p.amount),0)) AS balance_due,
-    GROUP_CONCAT(p.method ORDER BY p.payment_date SEPARATOR ', ') AS payment_methods
-FROM orders o
-LEFT JOIN payments p ON p.order_id = o.id AND p.status = 'completed'
-GROUP BY o.id, o.total_amount;
-
--- B3. Menu item catalogue with category & menu name
-CREATE OR REPLACE VIEW vw_menu_catalogue AS
-SELECT
-    mi.id           AS item_id,
-    m.name          AS menu_name,
-    cat.name        AS category,
-    mi.name         AS item_name,
-    mi.description,
-    mi.price,
-    IF(mi.is_available, 'Yes', 'No') AS available
-FROM menu_items mi
-JOIN menus      m   ON m.id   = mi.menu_id
-JOIN categories cat ON cat.id = mi.category_id;
-
--- B4. Top-selling items (by total quantity ordered)
-CREATE OR REPLACE VIEW vw_top_items AS
-SELECT
-    mi.id,
-    mi.name         AS item_name,
-    m.name          AS menu_name,
-    cat.name        AS category,
-    mi.price,
-    SUM(oi.quantity)               AS total_qty_ordered,
-    SUM(oi.quantity * mi.price)    AS total_revenue
-FROM order_items oi
-JOIN menu_items mi  ON mi.id  = oi.menu_item_id
-JOIN menus      m   ON m.id   = mi.menu_id
-JOIN categories cat ON cat.id = mi.category_id
-GROUP BY mi.id, mi.name, m.name, cat.name, mi.price
-ORDER BY total_qty_ordered DESC;
-
--- B5. Staff workload — orders managed per user
-CREATE OR REPLACE VIEW vw_staff_workload AS
-SELECT
-    u.id,
-    u.full_name,
-    u.role,
-    COUNT(o.id)           AS total_orders,
-    SUM(o.total_amount)   AS total_revenue_managed
-FROM users u
-LEFT JOIN orders o ON o.user_id = u.id
-GROUP BY u.id, u.full_name, u.role;
-
--- ===========================================================
---  SECTION C — BASIC SELECT QUERIES
--- ===========================================================
-
--- C1. All active (available) menu items
+-- All available menu items
 SELECT * FROM menu_items WHERE is_available = 1;
 
--- C2. Orders placed this month
-SELECT * FROM orders
-WHERE MONTH(created_at) = MONTH(CURDATE())
-  AND YEAR(created_at)  = YEAR(CURDATE());
+-- Orders placed this month
+SELECT * FROM orders WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at)  = YEAR(CURDATE());
 
--- C3. Clients registered in 2025
+-- Clients registered in 2025
 SELECT id, full_name, email, phone
 FROM clients
 WHERE YEAR(created_at) = 2025
 ORDER BY created_at DESC;
 
--- C4. Payments still pending
+-- Payments still pending
 SELECT p.*, o.total_amount, c.full_name AS client
 FROM payments p
 JOIN orders  o ON o.id = p.order_id
 JOIN clients c ON c.id = o.client_id
 WHERE p.status = 'pending';
 
--- ===========================================================
---  SECTION D — JOIN QUERIES
--- ===========================================================
+
+
+--  JOIN QUERIES
+
 
 -- D1. Order details with client, event and managing staff
 SELECT
@@ -230,11 +129,9 @@ WHERE id IN (
     WHERE status IN ('confirmed', 'delivered')
 );
 
--- ===========================================================
---  SECTION F — AGGREGATE / REPORT QUERIES
--- ===========================================================
+-- AGGREGATE / REPORT QUERIES
 
--- F1. Total revenue by order status
+-- Total revenue by order status
 SELECT
     status,
     COUNT(*)          AS order_count,
@@ -245,7 +142,7 @@ SELECT
 FROM orders
 GROUP BY status;
 
--- F2. Monthly revenue report
+-- Monthly revenue report
 SELECT
     YEAR(created_at)  AS year,
     MONTH(created_at) AS month,
@@ -255,7 +152,7 @@ FROM orders
 GROUP BY YEAR(created_at), MONTH(created_at)
 ORDER BY year, month;
 
--- F3. Revenue collected per payment method
+-- Revenue collected per payment method
 SELECT
     method,
     COUNT(*)    AS transactions,
@@ -265,7 +162,7 @@ WHERE status = 'completed'
 GROUP BY method
 ORDER BY total_collected DESC;
 
--- F4. Events by type with order count and total value
+-- Events by type with order count and total value
 SELECT
     e.type,
     COUNT(o.id)          AS total_orders,
@@ -276,7 +173,7 @@ LEFT JOIN orders o ON o.event_id = e.id
 GROUP BY e.type
 ORDER BY total_revenue DESC;
 
--- F5. Guest count distribution
+-- Guest count distribution
 SELECT
     CASE
         WHEN guest_count <= 50            THEN 'Small (≤50)'
@@ -288,28 +185,25 @@ SELECT
 FROM events
 GROUP BY event_size;
 
--- ===========================================================
---  SECTION G — SEARCH & FILTER QUERIES
---  (Parameterised versions — replace ? with actual values)
--- ===========================================================
+-- SEARCH & FILTER QUERIES
 
--- G1. Search orders by client name
+-- Search orders by client name
 SELECT vos.*
 FROM vw_order_summary vos
 WHERE vos.client_name LIKE CONCAT('%', 'Ali', '%');
 
--- G2. Filter orders by status and date range
+-- Filter orders by status and date range
 SELECT *
 FROM orders
 WHERE status      = 'confirmed'
   AND created_at BETWEEN '2025-01-01' AND '2025-12-31';
 
--- G3. Search menu items by name or description
+-- Search menu items by name or description
 SELECT * FROM menu_items
 WHERE (name LIKE '%chicken%' OR description LIKE '%chicken%')
   AND is_available = 1;
 
--- G4. Filter payments by method and status
+-- Filter payments by method and status
 SELECT p.*, c.full_name AS client
 FROM payments p
 JOIN orders  o ON o.id = p.order_id
@@ -317,11 +211,9 @@ JOIN clients c ON c.id = o.client_id
 WHERE p.method = 'card'
   AND p.status = 'completed';
 
--- ===========================================================
---  SECTION H — DASHBOARD KPI QUERIES
--- ===========================================================
+--  DASHBOARD KPI QUERIES
 
--- H1. Overall dashboard counters
+-- Overall dashboard counters
 SELECT
     (SELECT COUNT(*) FROM clients)                          AS total_clients,
     (SELECT COUNT(*) FROM orders)                           AS total_orders,
@@ -331,7 +223,7 @@ SELECT
     (SELECT COUNT(*) FROM menu_items WHERE is_available=1)  AS active_menu_items,
     (SELECT SUM(amount) FROM payments WHERE status='completed') AS total_revenue_collected;
 
--- H2. Recent 5 orders for dashboard feed
+-- Recent 5 orders for dashboard feed
 SELECT
     o.id,
     c.full_name  AS client,
@@ -345,7 +237,7 @@ JOIN events  e ON e.id = o.event_id
 ORDER BY o.created_at DESC
 LIMIT 5;
 
--- H3. Upcoming events in the next 30 days
+-- Upcoming events in the next 30 days
 SELECT
     e.*,
     o.status AS order_status,
